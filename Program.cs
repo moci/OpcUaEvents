@@ -40,17 +40,21 @@ internal sealed class Server : IDisposable
 	public Server()
 	{
 		var versionNode = new OpcDataVariableNode<string>("Version", "0.0.1");
+
+		// Client must subscribe to this node to receive events
 		var eventsNode = new OpcObjectNode("Events");
 		var rootNode = new OpcObjectNode("Root", versionNode, eventsNode);
 
 		mServer = new OpcServer(rootNode);
 		mServer.Start();
 
+		// The node that represents the actual event
 		mEventNode = new OpcEventNode("Event")
 		{
 			SourceNodeId = eventsNode.Id,
 			SourceName = eventsNode.SymbolicName
 		};
+
 		eventsNode.AddNotifier(mServer.SystemContext, mEventNode);
 		EventsSourceNodeId = eventsNode.Id;
 	}
@@ -61,7 +65,14 @@ internal sealed class Server : IDisposable
 	}
 
 	public string Address => mServer.Address.ToString();
+	/// <summary>
+	/// The id of the node that will publish events
+	/// </summary>
 	public OpcNodeId EventsSourceNodeId { get; }
+
+	/// <summary>
+	/// Send the message as an event
+	/// </summary>
 	public void Send(string message)
 	{
 		mEventNode.EventId = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString());
